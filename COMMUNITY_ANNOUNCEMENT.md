@@ -1,6 +1,6 @@
 # 🚀 ANNONCE : OpenClaw Token Optimizer - Réduisez vos coûts de 90% !
 
-**💰 0.5$ pour créer et déployer ce projet sans écrire une ligne de code...**
+**💰 0.2$ pour créer et déployer ce projet sans écrire une ligne de code...**
 
 ## Le Problème que Tout le Monde Connaît 😫
 
