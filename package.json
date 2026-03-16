@@ -1,0 +1,65 @@
+{
+  "name": "openclaw-token-optimizer",
+  "version": "1.0.0",
+  "description": "Optimise token consumption in OpenClaw by 70-90% using vector embeddings and semantic search",
+  "main": "src/index.js",
+  "bin": {
+    "openclaw-token-optimizer": "./bin/cli.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "setup": "node scripts/setup.js",
+    "test": "node scripts/test.js",
+    "analyze": "node src/analyzer.js",
+    "index": "node src/vector-memory.js --index",
+    "maintenance": "node scripts/maintenance.js",
+    "lint": "eslint src/",
+    "build": "echo 'No build required'"
+  },
+  "keywords": [
+    "openclaw",
+    "token-optimization",
+    "vector-embeddings",
+    "semantic-search",
+    "ai",
+    "memory-optimization"
+  ],
+  "author": "OpenClaw Community",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openclaw-community/openclaw-token-optimizer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/openclaw-community/openclaw-token-optimizer/issues"
+  },
+  "homepage": "https://github.com/openclaw-community/openclaw-token-optimizer#readme",
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=7.0.0"
+  },
+  "dependencies": {
+    "vectra": "^0.5.0",
+    "@xenova/transformers": "^2.17.2",
+    "commander": "^12.1.0",
+    "chalk": "^5.3.0",
+    "ora": "^8.0.1",
+    "yaml": "^2.5.0"
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0"
+  },
+  "files": [
+    "src/",
+    "bin/",
+    "scripts/",
+    "docs/",
+    "examples/",
+    "templates/",
+    "LICENSE",
+    "README.md"
+  ],
+  "peerDependencies": {
+    "openclaw": ">=2026.3.0"
+  }
+}
