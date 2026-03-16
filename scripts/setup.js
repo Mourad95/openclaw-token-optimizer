@@ -3,8 +3,8 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
-const chalk = require('chalk');
-const ora = require('ora');
+const chalk = require('chalk').default || require('chalk');
+const ora = require('ora').default || require('ora');
 
 /**
  * Setup script for OpenClaw Token Optimizer
@@ -173,7 +173,7 @@ class SetupScript {
 
   async testIntegration() {
     // Test the plugin directly
-    const { OpenClawTokenOptimizerPlugin } = require('../src/openclaw-plugin');
+    const OpenClawTokenOptimizerPlugin = require('../src/openclaw-plugin');
     const plugin = new OpenClawTokenOptimizerPlugin();
     
     await plugin.initialize();

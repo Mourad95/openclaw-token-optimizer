@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
-const { OpenClawTokenOptimizerPlugin } = require('../src/openclaw-plugin');
+const path = require('path');
+const OpenClawTokenOptimizerPlugin = require('../src/openclaw-plugin');
 const TokenOptimizer = require('../src/token-optimizer');
-const chalk = require('chalk');
-const ora = require('ora');
+const chalk = require('chalk').default || require('chalk');
+const ora = require('ora').default || require('ora');
 
 /**
  * Test suite for OpenClaw Token Optimizer

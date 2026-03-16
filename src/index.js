@@ -3,8 +3,8 @@
 const OpenClawTokenOptimizerPlugin = require('./openclaw-plugin');
 const TokenOptimizer = require('./token-optimizer');
 const { program } = require('commander');
-const chalk = require('chalk');
-const ora = require('ora');
+const chalk = require('chalk').default || require('chalk');
+const ora = require('ora').default || require('ora');
 
 /**
  * Main CLI entry point for OpenClaw Token Optimizer

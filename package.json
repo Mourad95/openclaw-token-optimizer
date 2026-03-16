@@ -10,7 +10,7 @@
     "start": "node src/index.js",
     "setup": "node scripts/setup.js",
     "test": "node scripts/test.js",
-    "analyze": "node src/analyzer.js",
+    "analyze": "node src/index.js analyze",
     "index": "node src/vector-memory.js --index",
     "maintenance": "node scripts/maintenance.js",
     "lint": "eslint src/",
