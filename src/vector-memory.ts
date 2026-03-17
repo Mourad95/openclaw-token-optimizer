@@ -3,6 +3,8 @@ const { pipeline } = require('@xenova/transformers');
 import * as fs from 'fs';
 import * as path from 'path';
 import type { VectorMemoryOptions, MemorySearchResult, IndexResult, IndexFileStats } from './types';
+import { logger } from './logger';
+import { ModelLoadError } from './errors';
 
 export class VectorMemory {
   private indexPath: string;
@@ -24,18 +26,27 @@ export class VectorMemory {
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
-    console.log('Loading embedding model:', this.embeddingModel);
-    this.embedder = await pipeline('feature-extraction', this.embeddingModel);
+    logger.verbose('Loading embedding model:', this.embeddingModel);
+    try {
+      this.embedder = await pipeline('feature-extraction', this.embeddingModel);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      throw new ModelLoadError(
+        `Failed to load embedding model "${this.embeddingModel}": ${msg}. ` +
+          'Check network connectivity (first download), disk space, and that the model name is valid.',
+        err
+      );
+    }
 
     if (!(await this.index.isIndexCreated())) {
       await this.index.createIndex();
-      console.log('Created new vector index at:', this.indexPath);
+      logger.verbose('Created new vector index at:', this.indexPath);
     } else {
-      console.log('Loaded existing vector index from:', this.indexPath);
+      logger.verbose('Loaded existing vector index from:', this.indexPath);
     }
 
     this.initialized = true;
-    console.log('VectorMemory initialized successfully');
+    logger.debug('VectorMemory initialized successfully');
   }
 
   async generateEmbedding(text: string): Promise<number[]> {
@@ -62,7 +73,7 @@ export class VectorMemory {
       },
     });
 
-    console.log(`Memory added: ${id} (${text.length} chars)`);
+    logger.debug('Memory added:', id, `(${text.length} chars)`);
     return id;
   }
 
@@ -87,18 +98,18 @@ export class VectorMemory {
         score: r.score,
       }));
 
-    console.log(`Found ${filteredResults.length} relevant memories (min score: ${minScore})`);
+    logger.verbose(`Found ${filteredResults.length} relevant memories (min score: ${minScore})`);
     return filteredResults;
   }
 
   async indexMemoryFiles(memoryDir: string, _options: Record<string, unknown> = {}): Promise<IndexResult> {
     await this.initialize();
 
-    console.log(`Indexing memory files from: ${memoryDir}`);
+    logger.verbose('Indexing memory files from:', memoryDir);
 
     if (!fs.existsSync(memoryDir)) {
       fs.mkdirSync(memoryDir, { recursive: true });
-      console.log(`Created memory directory: ${memoryDir}`);
+      logger.verbose('Created memory directory:', memoryDir);
       return { indexed: 0, files: 0 };
     }
 
@@ -131,13 +142,13 @@ export class VectorMemory {
         }
 
         fileStats.push({ file: fileName, chunks: chunks.length, size: content.length });
-        console.log(`Indexed: ${fileName} (${chunks.length} chunks)`);
+        logger.verbose('Indexed:', fileName, `(${chunks.length} chunks)`);
       } catch (error) {
         console.error(`Error indexing ${filePath}:`, (error as Error).message);
       }
     }
 
-    console.log(`Indexing complete: ${totalChunks} chunks from ${filePaths.length} files`);
+    logger.verbose(`Indexing complete: ${totalChunks} chunks from ${filePaths.length} files`);
     return { indexed: totalChunks, files: filePaths.length, fileStats };
   }
 
@@ -195,7 +206,7 @@ export class VectorMemory {
   async clearIndex(): Promise<{ success: boolean }> {
     await this.initialize();
     await this.index.deleteIndex();
-    console.log('Vector index cleared');
+    logger.verbose('Vector index cleared');
     return { success: true };
   }
 

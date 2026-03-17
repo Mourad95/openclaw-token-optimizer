@@ -99,7 +99,7 @@ Create a custom agent configuration that uses the token optimizer:
   "memorySearch": {
     "enabled": true,
     "provider": "custom",
-    "command": "node /path/to/openclaw-token-optimizer/src/openclaw-plugin.js memory-search",
+    "command": "node /path/to/openclaw-token-optimizer/dist/src/openclaw-plugin.js memory-search",
     "maxResults": 7,
     "maxTokens": 1500
   }
@@ -201,7 +201,7 @@ class TokenMonitor {
 Integrate with different memory sources:
 
 ```javascript
-const { VectorMemory } = require('openclaw-token-optimizer/src/vector-memory');
+const { VectorMemory } = require('openclaw-token-optimizer/dist/src/vector-memory');
 
 class CustomMemoryManager {
   constructor() {

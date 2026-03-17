@@ -85,6 +85,10 @@ openclaw gateway restart
 - **Memory directory:** default `./memory`. Override with `OPENCLAW_MEMORY_DIR` or `OPENCLAW_WORKSPACE` (uses `$OPENCLAW_WORKSPACE/memory`).
 - **OpenClaw:** `make setup` or `npm run setup` writes the memory-search command into `~/.openclaw/openclaw.json`.
 
+**Debug / verbose:** Set `OPENCLAW_TOKEN_OPTIMIZER_VERBOSE=true` for init and search logs; `OPENCLAW_TOKEN_OPTIMIZER_DEBUG=true` for more detail (e.g. cache hits). By default the plugin is quiet when used by OpenClaw.
+
+**Exit codes:** `0` = success, `1` = general error, `2` = embedding model load failed (check network/disk, then retry).
+
 ---
 
 ## Docs

@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
+import chalk from 'chalk';
+import ora from 'ora';
 import { OpenClawTokenOptimizerPlugin } from './openclaw-plugin';
 import { TokenOptimizer } from './token-optimizer';
 import { program } from 'commander';
 import * as fs from 'fs';
-
-const chalk = require('chalk').default || require('chalk');
-const ora = require('ora').default || require('ora');
+import { ModelLoadError } from './errors';
 
 program
   .name('openclaw-token-optimizer')
@@ -64,6 +64,10 @@ program
     } catch (error) {
       spinner.fail(chalk.red('Search failed'));
       console.error(chalk.red('Error:'), (error as Error).message);
+      if (error instanceof ModelLoadError) {
+        console.error(chalk.gray('Tip: Check network connectivity and disk space, then retry.'));
+        process.exit(2);
+      }
       process.exit(1);
     }
   });
@@ -150,6 +154,10 @@ program
       } catch (error) {
         spinner.fail(chalk.red('Analysis failed'));
         console.error(chalk.red('Error:'), (error as Error).message);
+        if (error instanceof ModelLoadError) {
+          console.error(chalk.gray('Tip: Check network connectivity and disk space, then retry.'));
+          process.exit(2);
+        }
         process.exit(1);
       }
     }
@@ -199,6 +207,10 @@ program
     } catch (error) {
       spinner.fail(chalk.red('Failed to get statistics'));
       console.error(chalk.red('Error:'), (error as Error).message);
+      if (error instanceof ModelLoadError) {
+        console.error(chalk.gray('Tip: Check network connectivity and disk space, then retry.'));
+        process.exit(2);
+      }
       process.exit(1);
     }
   });
@@ -241,6 +253,10 @@ program
     } catch (error) {
       spinner.fail(chalk.red('Indexing failed'));
       console.error(chalk.red('Error:'), (error as Error).message);
+      if (error instanceof ModelLoadError) {
+        console.error(chalk.gray('Tip: Check network connectivity and disk space, then retry.'));
+        process.exit(2);
+      }
       process.exit(1);
     }
   });
@@ -272,6 +288,10 @@ program
       } catch (error) {
         spinner.fail(chalk.red('Maintenance failed'));
         console.error(chalk.red('Error:'), (error as Error).message);
+        if (error instanceof ModelLoadError) {
+          console.error(chalk.gray('Tip: Check network connectivity and disk space, then retry.'));
+          process.exit(2);
+        }
         process.exit(1);
       }
     }

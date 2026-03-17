@@ -4,6 +4,8 @@ import { TokenOptimizer } from './token-optimizer';
 import * as path from 'path';
 import * as fs from 'fs';
 import type { MemorySearchOptions, MaintenanceOptions } from './types';
+import { logger } from './logger';
+import { ModelLoadError } from './errors';
 
 export class OpenClawTokenOptimizerPlugin {
   optimizer: TokenOptimizer;
@@ -22,18 +24,18 @@ export class OpenClawTokenOptimizerPlugin {
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
-    console.log('Initializing OpenClaw Token Optimizer Plugin...');
+    logger.verbose('Initializing OpenClaw Token Optimizer Plugin...');
     await this.optimizer.initialize();
 
     const memoryDir = this.getMemoryDir();
     if (fs.existsSync(memoryDir)) {
-      console.log('Auto-indexing memory files...');
+      logger.verbose('Auto-indexing memory files...');
       const stats = await this.optimizer.vectorMemory.indexMemoryFiles(memoryDir);
-      console.log(`Auto-indexed ${stats.indexed} chunks from ${stats.files} files`);
+      logger.verbose(`Auto-indexed ${stats.indexed} chunks from ${stats.files} files`);
     }
 
     this.initialized = true;
-    console.log('OpenClaw Token Optimizer Plugin ready');
+    logger.debug('OpenClaw Token Optimizer Plugin ready');
   }
 
   getMemoryDir(): string {
@@ -69,7 +71,7 @@ export class OpenClawTokenOptimizerPlugin {
     const maxResults = options.maxResults ?? 5;
     const _maxTokens = options.maxTokens ?? 1000;
 
-    console.log(`OpenClaw memory search: "${query}" (maxResults: ${maxResults}, maxTokens: ${_maxTokens})`);
+    logger.verbose(`OpenClaw memory search: "${query}" (maxResults: ${maxResults}, maxTokens: ${_maxTokens})`);
 
     const result = await this.optimizer.getOptimizedContext(query, maxResults);
 
@@ -296,7 +298,7 @@ async function main(): Promise<void> {
 
 if (require.main === module) {
   main().catch((error) => {
-    console.error('Plugin error:', error);
-    process.exit(1);
+    console.error('Plugin error:', error instanceof Error ? error.message : error);
+    process.exit(error instanceof ModelLoadError ? 2 : 1);
   });
 }

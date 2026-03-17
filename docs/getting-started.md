@@ -61,7 +61,7 @@ The setup script automatically configures OpenClaw to use the token optimizer. I
       "memorySearch": {
         "enabled": true,
         "provider": "custom",
-        "command": "node /path/to/openclaw-token-optimizer/src/openclaw-plugin.js memory-search",
+        "command": "node /path/to/openclaw-token-optimizer/dist/src/openclaw-plugin.js memory-search",
         "maxResults": 5,
         "maxTokens": 1000
       }
@@ -84,7 +84,7 @@ The setup script automatically configures OpenClaw to use the token optimizer. I
 
 3. **Test the optimizer**:
    ```bash
-   node src/index.js search "test query"
+   node dist/src/index.js search "test query"
    ```
 
 ### Your First Optimization
@@ -143,6 +143,7 @@ openclaw-token-optimizer/
 ├── memory/           # Your memory files (.md format)
 ├── logs/             # Logs and reports
 ├── .vectra-index/    # Vector database (auto-created)
+├── dist/             # Compiled output (run from here after build)
 ├── src/              # Source code
 ├── scripts/          # Utility scripts
 └── docs/             # Documentation
@@ -186,10 +187,10 @@ Or test individual components:
 node scripts/test.js
 
 # Test search functionality
-node src/index.js search "test"
+node dist/src/index.js search "test"
 
 # Test token savings analysis
-node src/index.js analyze
+node dist/src/index.js analyze
 ```
 
 ### Troubleshooting
@@ -232,16 +233,19 @@ node src/index.js analyze
    openclaw-token-optimizer index
    ```
 
-#### Debug Mode
+#### Debug / verbose logging
 
-Enable verbose logging:
+By default the plugin is quiet when used by OpenClaw. To see internal logs:
 
 ```bash
-# Set debug environment variable
+# Verbose (initialization, search summary, indexing)
+export OPENCLAW_TOKEN_OPTIMIZER_VERBOSE=true
+
+# Debug (includes cache hits, per-item logs)
 export OPENCLAW_TOKEN_OPTIMIZER_DEBUG=true
 
 # Run with debug output
-node src/index.js search "query" -v
+node dist/src/index.js search "query" -v
 ```
 
 ### Next Steps

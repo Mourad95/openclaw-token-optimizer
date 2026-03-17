@@ -7,6 +7,7 @@ import type {
   OptimizedContextResult,
   AnalysisResult,
 } from './types';
+import { logger } from './logger';
 
 export interface GetOptimizedContextResult {
   context: string;
@@ -48,7 +49,7 @@ export class TokenOptimizer {
 
   async initialize(): Promise<void> {
     await this.vectorMemory.initialize();
-    console.log('TokenOptimizer initialized');
+    logger.debug('TokenOptimizer initialized');
   }
 
   async getOptimizedContext(query: string, maxResults = 5): Promise<GetOptimizedContextResult> {
@@ -58,7 +59,7 @@ export class TokenOptimizer {
     const cacheKey = this.generateCacheKey(query, maxResults);
     if (this.contextCache.has(cacheKey)) {
       this.performanceStats.cacheHits++;
-      console.log('Cache hit for query:', query.substring(0, 50));
+      logger.debug('Cache hit for query:', query.substring(0, 50));
       return this.contextCache.get(cacheKey)!;
     }
 
@@ -100,7 +101,7 @@ export class TokenOptimizer {
     this.manageCacheSize();
     this.updatePerformanceStats(result.stats.responseTime);
 
-    console.log(
+    logger.verbose(
       `Optimized context: ${estimatedTokens} tokens (saved ${result.stats.savingsPercent}%)`
     );
     return result;

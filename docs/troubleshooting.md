@@ -71,7 +71,7 @@ node --version
 openclaw config get memorySearch
 
 # 2. Verify the plugin path is correct
-# The command should point to openclaw-plugin.js
+# The command should point to dist/src/openclaw-plugin.js (after npm run build)
 cat ~/.openclaw/openclaw.json | grep -A5 memorySearch
 
 # 3. Restart OpenClaw gateway
@@ -81,7 +81,25 @@ openclaw gateway restart
 openclaw gateway logs
 
 # 5. Test the plugin directly
-node src/openclaw-plugin.js search "test"
+node dist/src/openclaw-plugin.js search "test"
+```
+
+#### Issue: "Failed to load embedding model"
+**Symptoms**: Error like `Failed to load embedding model "Xenova/...": ...` and exit code 2.
+
+**Solutions**:
+```bash
+# 1. Ensure network is available (first run downloads the model)
+ping -c 1 huggingface.co
+
+# 2. Check disk space
+df -h .
+
+# 3. Set cache directory if needed (e.g. writable location)
+export HF_HOME=/path/to/writable/cache
+
+# 4. Retry; subsequent runs use the cached model
+node dist/src/index.js search "test"
 ```
 
 #### Issue: "Invalid configuration" error
@@ -99,7 +117,7 @@ cp ~/.openclaw/openclaw.json.backup* ~/.openclaw/openclaw.json
 npm run setup
 
 # 4. Check for syntax errors
-node -c src/openclaw-plugin.js
+node -c dist/src/openclaw-plugin.js
 ```
 
 ### Performance Problems
@@ -120,7 +138,7 @@ free -h  # Memory
 df -h    # Disk space
 
 # 4. Reduce chunk size (if memory is limited)
-# Edit src/vector-memory.js, reduce chunkSize from 500 to 300
+# Edit src/vector-memory.ts, reduce chunkSize from 500 to 300, then npm run build
 
 # 5. Limit concurrent searches
 # Set environment variable
@@ -163,7 +181,7 @@ openclaw-token-optimizer search "test"
 ls -la .vectra-index/
 
 # 4. Increase cache TTL
-# Edit src/token-optimizer.js, increase cacheSize
+# Edit src/token-optimizer.ts, increase cacheSize, then npm run build
 ```
 
 ### Search Problems
@@ -205,7 +223,7 @@ export OPENCLAW_MIN_RELEVANCE_SCORE="0.5"
 # Add relevant keywords
 
 # 3. Reindex with better chunking
-# Edit src/vector-memory.js, adjust chunkSize and overlap
+# Edit src/vector-memory.ts, adjust chunkSize and overlap, then npm run build
 
 # 4. Use more specific queries
 ```
@@ -222,7 +240,7 @@ openclaw-token-optimizer search "query" -v
 # Remove duplicate content from memory files
 
 # 3. Increase duplicate detection sensitivity
-# Edit src/token-optimizer.js, adjust duplicate detection logic
+# Edit src/token-optimizer.ts, adjust duplicate detection logic, then npm run build
 ```
 
 ### Token Optimization Problems
@@ -322,7 +340,7 @@ export OPENCLAW_INDEX_PATH="/tmp/.vectra-index"
 # Split large memory files into smaller ones
 
 # 2. Increase chunk size
-# Edit src/vector-memory.js, increase chunkSize to 1000
+# Edit src/vector-memory.ts, increase chunkSize to 1000, then npm run build
 
 # 3. Skip indexing of old files
 find memory/ -name "*.md" -mtime -7 | xargs cat | # process only recent files
@@ -346,7 +364,7 @@ chmod 755 logs/
 export OPENCLAW_TOKEN_OPTIMIZER_DEBUG=true
 
 # 3. Check if logging is enabled in code
-# Look for console.log statements in src/
+# Enable debug logs: OPENCLAW_TOKEN_OPTIMIZER_DEBUG=true (see src/logger.ts)
 
 # 4. Redirect output to file
 openclaw-token-optimizer search "query" 2>&1 | tee debug.log
@@ -364,7 +382,7 @@ node --version
 openclaw-token-optimizer search "query" -v
 
 # 2. Check Node.js error stack
-NODE_DEBUG=module node src/index.js search "query"
+NODE_DEBUG=module node dist/src/index.js search "query"
 
 # 3. Add custom error handling
 # Edit src files to add more detailed error messages
@@ -393,7 +411,7 @@ openclaw --version
 # Needs 2026.3.0 or higher
 
 # 4. Check plugin compatibility
-node src/openclaw-plugin.js --version
+node dist/src/openclaw-plugin.js --version
 
 # 5. Run OpenClaw in debug mode
 openclaw gateway start --debug
@@ -414,7 +432,7 @@ openclaw gateway start --debug
 # Review plugin code for potential loops
 
 # 4. Test plugin directly with timeout
-timeout 5 node src/openclaw-plugin.js search "test"
+timeout 5 node dist/src/openclaw-plugin.js search "test"
 ```
 
 #### Issue: "Memory leaks"
@@ -426,7 +444,7 @@ timeout 5 node src/openclaw-plugin.js search "test"
 watch -n 1 'ps aux | grep node | grep -v grep'
 
 # 2. Enable garbage collection logging
-node --expose-gc src/index.js search "query"
+node --expose-gc dist/src/index.js search "query"
 
 # 3. Check for circular references
 # Use heap dump analysis
@@ -434,6 +452,14 @@ node --expose-gc src/index.js search "query"
 # 4. Implement memory limits
 export NODE_OPTIONS="--max-old-space-size=512"
 ```
+
+### CLI exit codes
+
+When running the CLI or plugin directly, exit codes are:
+
+- **0** — Success
+- **1** — General error (e.g. invalid args, search failure)
+- **2** — Model/embedding load failed (network, disk, or invalid model); check connectivity and retry
 
 ## 🔧 Diagnostic Tools
 
@@ -466,7 +492,7 @@ du -sh .vectra-index 2>/dev/null || echo "No vector index"
 echo ""
 
 echo "5. Plugin Test:"
-node src/openclaw-plugin.js search "diagnostic" 2>&1 | tail -5
+node dist/src/openclaw-plugin.js search "diagnostic" 2>&1 | tail -5
 echo ""
 
 echo "6. OpenClaw Configuration:"
@@ -486,22 +512,22 @@ echo "Running performance benchmarks..."
 echo ""
 
 echo "1. Cold search (no cache):"
-time node src/openclaw-plugin.js search "benchmark test 1" > /dev/null
+time node dist/src/openclaw-plugin.js search "benchmark test 1" > /dev/null
 echo ""
 
 echo "2. Warm search (cached):"
-time node src/openclaw-plugin.js search "benchmark test 1" > /dev/null
+time node dist/src/openclaw-plugin.js search "benchmark test 1" > /dev/null
 echo ""
 
 echo "3. Multiple searches:"
 for i in {1..5}; do
   echo "  Search $i:"
-  time node src/openclaw-plugin.js search "benchmark test $i" > /dev/null
+  time node dist/src/openclaw-plugin.js search "benchmark test $i" > /dev/null
 done
 echo ""
 
 echo "4. Indexing test:"
-time node src/openclaw-plugin.js index > /dev/null
+time node dist/src/index.js index > /dev/null
 ```
 
 ### Log Analysis
@@ -595,11 +621,11 @@ LOG_FILE="logs/monitor-$(date +%Y-%m-%d).log"
   
   # Check plugin health
   echo "2. Plugin Health:"
-  node src/openclaw-plugin.js stats 2>&1 | grep -A5 "=== PERFORMANCE ==="
+  node dist/src/openclaw-plugin.js stats 2>&1 | grep -A5 "=== PERFORMANCE ==="
   
   # Check token savings
   echo "3. Token Savings:"
-  node src/openclaw-plugin.js analyze 2>&1 | grep -A3 "=== TOKEN SAVINGS ANALYSIS ==="
+  node dist/src/openclaw-plugin.js analyze 2>&1 | grep -A3 "=== TOKEN SAVINGS ANALYSIS ==="
   
   # Check for errors
   echo "4. Recent Errors:"
