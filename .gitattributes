@@ -1,0 +1,2 @@
+# Exclude tiny JS stub from language stats so GitHub shows TypeScript
+bin/cli.js linguist-generated=true
