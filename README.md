@@ -2,30 +2,36 @@
 
 Reduce OpenClaw token consumption by **70–90%** using vector embeddings and semantic search. Only the most relevant memory is sent to the LLM.
 
-**Requirements:** Node.js ≥16, npm ≥7
+- **Stack:** TypeScript, Node.js ≥16, vectra, Xenova/transformers (local embeddings)
+- **Requirements:** Node.js ≥16, npm ≥7
 
 ---
 
 ## Quick Start
 
 ```bash
-# 1. Clone and install
 git clone https://github.com/openclaw-community/openclaw-token-optimizer.git
 cd openclaw-token-optimizer
 npm install
+npm run build
 
-# 2. Add memory files (Markdown)
 mkdir -p memory
 echo "# My notes\n\nWorking on project X." > memory/notes.md
 
-# 3. Index memories (first run downloads the embedding model)
 npm run index
-
-# 4. Search
-node src/index.js search "what am I working on?"
+node dist/src/index.js search "what am I working on?"
 ```
 
-Optional: integrate with OpenClaw so it uses the optimizer automatically:
+With **Make**:
+
+```bash
+make install
+make build
+make index
+make search Q="what am I working on?"
+```
+
+Optional — use with OpenClaw:
 
 ```bash
 npm run setup
@@ -34,30 +40,50 @@ openclaw gateway restart
 
 ---
 
-## Commands
+## Commands (npm)
 
 | Command | Description |
 |--------|-------------|
-| `node src/index.js index` | Index `memory/*.md` (run after adding/editing files) |
-| `node src/index.js search "query"` | Get optimized context for a query |
-| `node src/index.js stats` | Plugin stats and performance |
-| `node src/index.js analyze` | Token savings analysis |
-| `node src/index.js maintenance` | Cache cleanup, rebuild index |
+| `npm run build` | Compile TypeScript → `dist/` |
+| `npm run index` | Index `memory/*.md` |
+| `node dist/src/index.js search "query"` | Semantic search |
+| `npm run stats` | Plugin statistics |
+| `npm run analyze` | Token savings analysis |
+| `npm run maintenance` | Cache cleanup, index maintenance |
 | `npm test` | Run test suite |
 
-**Options (examples):**
+**CLI options (examples):**
 
-- `search "query" --limit 10 --verbose`
-- `index --dir /path/to/notes --clear`
-- `analyze --export report.json`
-- `maintenance --clear-cache` or `--rebuild-index`
+- `node dist/src/index.js search "query" --limit 10 --verbose`
+- `node dist/src/index.js index --dir ./notes --clear`
+- `node dist/src/index.js analyze --export report.json`
+- `node dist/src/index.js maintenance --clear-cache --rebuild-index`
+
+---
+
+## Make targets
+
+| Target | Description |
+|--------|-------------|
+| `make` / `make help` | List all targets |
+| `make install` | npm install |
+| `make build` | Compile TypeScript |
+| `make test` | Run tests (builds if needed) |
+| `make clean` | Remove `dist/` |
+| `make index` | Index memories (`make index DIR=./memory` optional) |
+| `make search Q="query"` | Semantic search |
+| `make analyze` | Token savings analysis |
+| `make stats` | Plugin statistics |
+| `make maintenance` | Cache + index maintenance |
+| `make setup` | OpenClaw integration |
+| `make lint` | ESLint on `src/` |
 
 ---
 
 ## Configuration
 
-- **Memory directory:** default is `./memory`. Override with `OPENCLAW_MEMORY_DIR` or `OPENCLAW_WORKSPACE` (uses `$OPENCLAW_WORKSPACE/memory`).
-- **OpenClaw:** setup writes the custom memory-search command into your OpenClaw config (`~/.openclaw/openclaw.json`).
+- **Memory directory:** default `./memory`. Override with `OPENCLAW_MEMORY_DIR` or `OPENCLAW_WORKSPACE` (uses `$OPENCLAW_WORKSPACE/memory`).
+- **OpenClaw:** `make setup` or `npm run setup` writes the memory-search command into `~/.openclaw/openclaw.json`.
 
 ---
 
