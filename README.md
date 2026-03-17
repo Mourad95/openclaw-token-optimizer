@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="assets/logo.png" alt="OpenClaw" width="160" />
+</div>
+
 # OpenClaw Token Optimizer
 
 Reduce OpenClaw token consumption by **70–90%** using vector embeddings and semantic search. Only the most relevant memory is sent to the LLM.
