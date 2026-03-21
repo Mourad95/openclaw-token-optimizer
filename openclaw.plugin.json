@@ -1,0 +1,11 @@
+{
+  "id": "openclaw-token-optimizer",
+  "kind": "memory",
+  "name": "Memory (Token Optimizer)",
+  "description": "Gateway memory tools backed by openclaw-token-optimizer (vector search + token-metrics.json).",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

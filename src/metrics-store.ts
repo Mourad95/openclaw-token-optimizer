@@ -22,10 +22,21 @@ const emptyCumulative = (): CumulativeTokenMetrics => ({
   updatedAt: new Date().toISOString(),
 });
 
+/** Repo root when this file is `dist/src/metrics-store.js` (or `src/` in ts-node). */
+function packageRootFromFile(): string {
+  return path.resolve(__dirname, '..', '..');
+}
+
 function defaultMetricsPath(): string {
   const override = process.env.OPENCLAW_TOKEN_OPTIMIZER_METRICS_PATH?.trim();
   if (override) return path.resolve(override);
-  return path.join(process.cwd(), 'logs', 'token-metrics.json');
+  const repo = process.env.OPENCLAW_TOKEN_OPTIMIZER_REPO?.trim();
+  if (repo) {
+    return path.join(path.resolve(repo), 'logs', 'token-metrics.json');
+  }
+  // Use package location, not process.cwd() — the OpenClaw gateway often has cwd
+  // $HOME or ~/.openclaw, so cwd-based paths never wrote to the clone's logs/.
+  return path.join(packageRootFromFile(), 'logs', 'token-metrics.json');
 }
 
 export function resolveMetricsFilePath(): string {

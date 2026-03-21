@@ -6,12 +6,14 @@
 
 ### Improvements
 - **`npm run index`** / **`analyze`** and **`quickstart`** use a larger Node heap (`--max-old-space-size=8192`) to avoid OOM while indexing with local embeddings; **`make index`** / **`make search`** match. **`npm run setup`** / **`setup:ollama`** / **`openclaw:link`** use the same heap so the setup “integration test” (loads Xenova) does not OOM at the default ~4 GB cap. See [docs/troubleshooting.md](docs/troubleshooting.md#issue-javascript-heap-out-of-memory-during-indexing).
+- **`npm run quickstart`** ends with **`memory:sync-workspace`**: copies `memory/*.md` to `<OpenClaw workspace>/memory/` when workspace is resolved from `~/.openclaw/openclaw.json` or `OPENCLAW_WORKSPACE`. Disable with `OPENCLAW_TOKEN_OPTIMIZER_SKIP_WORKSPACE_MEMORY_SYNC=1`.
 
 ### Bug fixes
 - **Chunking:** `splitIntoChunks` advances the window correctly when a segment is shorter than `overlap` (no backward step, no char-by-char tail sliding), fixing **Invalid array length**, runaway chunk counts, and huge RAM use on small `.md` files (e.g. `memory/notes.md`).
 - **`analyze`:** When total memory is smaller than the context cap (`maxContextLength`), savings were always **0%** with a confusing “optimized: 500” line — the explanation now states that this is expected until raw memory exceeds the cap; README updated.
 
 ### Features
+- **OpenClaw gateway memory plugin** (`openclaw.plugin.json`, id `openclaw-token-optimizer`, same as npm `name`): register with `plugins.slots.memory` so `memory_search` uses `getOptimizedContext` and updates `logs/token-metrics.json`. See [docs/openclaw-gateway-memory-plugin.md](docs/openclaw-gateway-memory-plugin.md).
 - **`npm run quickstart`**: build + auto `memory/` sample + local `index`; **`openclaw:link`** / **`openclaw:link:ollama`**: one-shot link with OpenClaw after quickstart (`scripts/bootstrap-memory.mjs`).
 - Persistent cumulative token-savings metrics (`logs/token-metrics.json` by default), CLI `npm run metrics`, and `stats` output; override path with `OPENCLAW_TOKEN_OPTIMIZER_METRICS_PATH`. See [docs/metrics.md](docs/metrics.md).
 - CLI command `ask` to send a message to OpenClaw (`openclaw agent --message …`), with `OPENCLAW_BIN` override; see [docs/openclaw-ask.md](docs/openclaw-ask.md).

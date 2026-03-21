@@ -27,13 +27,13 @@ export class OpenClawTokenOptimizerPlugin {
     });
   }
 
-  async initialize(): Promise<void> {
+  async initialize(workspaceDir?: string): Promise<void> {
     if (this.initialized) return;
 
     logger.verbose('Initializing OpenClaw Token Optimizer Plugin...');
     await this.optimizer.initialize();
 
-    const memoryDir = this.getMemoryDir();
+    const memoryDir = this.getMemoryDir(workspaceDir ? { workspaceDir } : undefined);
     if (fs.existsSync(memoryDir)) {
       logger.verbose('Auto-indexing memory files...');
       const stats = await this.optimizer.vectorMemory.indexMemoryFiles(memoryDir);
@@ -44,12 +44,13 @@ export class OpenClawTokenOptimizerPlugin {
     logger.debug('OpenClaw Token Optimizer Plugin ready');
   }
 
-  getMemoryDir(): string {
+  getMemoryDir(options?: { workspaceDir?: string }): string {
     if (process.env.OPENCLAW_MEMORY_DIR) {
       return process.env.OPENCLAW_MEMORY_DIR;
     }
-    if (process.env.OPENCLAW_WORKSPACE) {
-      return path.join(process.env.OPENCLAW_WORKSPACE, 'memory');
+    const ws = options?.workspaceDir ?? process.env.OPENCLAW_WORKSPACE;
+    if (ws) {
+      return path.join(ws, 'memory');
     }
     return path.join(process.cwd(), 'memory');
   }
@@ -72,7 +73,7 @@ export class OpenClawTokenOptimizerPlugin {
     };
     metadata: Record<string, unknown>;
   }> {
-    await this.initialize();
+    await this.initialize(options.workspaceDir);
 
     const maxResults = options.maxResults ?? 5;
     const _maxTokens = options.maxTokens ?? 1000;

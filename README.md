@@ -8,6 +8,10 @@ Reduce OpenClaw token consumption by **roughly 70–90%** by sending only the **
 
 **Stack:** TypeScript, Node.js ≥16, vectra, Xenova/transformers (local embeddings).
 
+### Workspace memory sync (OpenClaw)
+
+After **`index`**, quickstart copies **`memory/*.md` → `<OpenClaw workspace>/memory/`** (reads `agents.defaults.workspace` in `~/.openclaw/openclaw.json` or `OPENCLAW_WORKSPACE`) so **gateway / Telegram** sees the same files as this repo. Skip: `OPENCLAW_TOKEN_OPTIMIZER_SKIP_WORKSPACE_MEMORY_SYNC=1`.
+
 ### Fast path (OpenClaw in a few commands)
 
 1. `git clone … && cd openclaw-token-optimizer && npm install`
@@ -19,7 +23,7 @@ Reduce OpenClaw token consumption by **roughly 70–90%** by sending only the **
      (requires [Ollama](https://ollama.com) installed)
 3. `openclaw gateway restart`
 
-These scripts **build**, ensure **`memory/`** exists (the repo ships **`memory/notes.md`**; the bootstrap step adds a sample only if the folder is empty), run **`npm run index`** (local Vectra index), then run **`setup`** / **`setup:ollama`** so `~/.openclaw/openclaw.json` points at this repo’s `memory/`.
+These scripts **build**, **`memory/`** + **index**, **sync workspace memory** (see line above), then **`setup`** / **`setup:ollama`** for `~/.openclaw/openclaw.json` (`memorySearch.extraPaths`, etc.).
 
 ---
 
@@ -53,13 +57,13 @@ This produces the CLI under `dist/`. Run this again after pulling code changes.
 
 ### 3–4. Memory folder + local index (automated)
 
-Use **`npm run quickstart`** — it compiles TypeScript, ensures **`memory/`** exists, adds a sample **`memory/notes.md`** only if the folder is empty, then runs **`npm run index`** (local `.vectra-index/`).
+**`npm run quickstart`** — `build` → sample `memory/` if needed → **`index`** (`.vectra-index/` beside the package) → **`memory:sync-workspace`** ([Workspace memory sync](#workspace-memory-sync-openclaw)).
 
 ```bash
 npm run quickstart
 ```
 
-Or do it manually: create `memory/`, add `.md` files, then `npm run build && npm run index`.
+Or manually: `memory/` + `.md` files, then `npm run build && npm run index` (add `npm run memory:sync-workspace` if you use OpenClaw with a separate workspace `memory/`).
 
 ### 5. Try a semantic search
 
@@ -85,6 +89,8 @@ openclaw gateway restart
 See **[docs/openclaw-memory-ollama.md](docs/openclaw-memory-ollama.md)** for Ollama defaults ([`src/openclaw-memory-defaults.ts`](src/openclaw-memory-defaults.ts)).
 
 `setup` adjusts `~/.openclaw/openclaw.json` under **`agents.defaults.memorySearch`** (e.g. `extraPaths` toward this project’s `memory/`). Embeddings must use a [supported memory provider](https://docs.openclaw.ai/reference/memory-config) in OpenClaw — not a legacy `custom` + shell `command`.
+
+To have **Telegram / gateway** memory searches run **this** optimizer (`getOptimizedContext`) and update **`logs/token-metrics.json`**, enable the **memory plugin** from this package and set **`plugins.slots.memory`** — see [docs/openclaw-gateway-memory-plugin.md](docs/openclaw-gateway-memory-plugin.md). `openclaw:link` alone does not switch the memory slot.
 
 **Check config:** `openclaw config get agents.defaults.memorySearch` (not `memorySearch` at the root — that path does not exist).
 
@@ -152,7 +158,8 @@ Numbers are **estimates** (~4 characters per token). See [docs/metrics.md](docs/
 
 | Command | What it does |
 |--------|----------------|
-| `npm run quickstart` | `build` + ensure `memory/` + sample `notes.md` if empty + `index` |
+| `npm run quickstart` | `build` + `memory/` + sample `notes.md` if empty + `index` + `memory:sync-workspace` |
+| `npm run memory:sync-workspace` | Copy `memory/*.md` → `<OpenClaw workspace>/memory/` (optional skip via env) |
 | `npm run openclaw:link` | `quickstart` + `setup` (wire this repo into OpenClaw) |
 | `npm run openclaw:link:ollama` | `quickstart` + `setup:ollama` (needs Ollama) |
 | `npm run memory:init` | Only create `memory/` + sample file if empty |
@@ -224,6 +231,7 @@ Numbers are **estimates** (~4 characters per token). See [docs/metrics.md](docs/
 | [OpenClaw memory — Ollama + optional fallback](docs/openclaw-memory-ollama.md) | Defaults: `nomic-embed-text` + `gemini` fallback |
 | [Diagnostics & usage](docs/openclaw-diagnostics-and-usage.md) | Model/token tracing in OpenClaw |
 | [Testing via Telegram](docs/testing-telegram.md) | End-to-end memory check with Telegram + optional CLI metrics |
+| [Gateway memory plugin](docs/openclaw-gateway-memory-plugin.md) | `plugins.slots.memory` + token-metrics on chat |
 
 ---
 

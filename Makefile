@@ -27,7 +27,7 @@ help:
 	@echo "  make ask       - send a message to OpenClaw (use: make ask Q=\"…\")"
 	@echo "  make maintenance - cache cleanup, index maintenance"
 	@echo "  make setup     - configure OpenClaw integration"
-	@echo "  make quickstart - build + memory sample + local index"
+	@echo "  make quickstart - build + memory sample + index + sync to OpenClaw workspace memory"
 	@echo "  make openclaw-link - quickstart + OpenClaw setup (npm run openclaw:link)"
 	@echo "  make openclaw-link-ollama - quickstart + Ollama setup (npm run openclaw:link:ollama)"
 	@echo "  make lint      - run ESLint on src/"

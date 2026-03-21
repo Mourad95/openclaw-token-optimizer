@@ -6,6 +6,16 @@ import type { VectorMemoryOptions, MemorySearchResult, IndexResult, IndexFileSta
 import { logger } from './logger';
 import { ModelLoadError } from './errors';
 
+/** Package root when built as `dist/src/vector-memory.js` — avoids `/.vectra-index` when gateway cwd is `/`. */
+function defaultIndexPath(): string {
+  const fromEnv = process.env.OPENCLAW_TOKEN_OPTIMIZER_INDEX_PATH?.trim();
+  if (fromEnv) {
+    return path.resolve(fromEnv);
+  }
+  const root = path.resolve(__dirname, '..', '..');
+  return path.join(root, '.vectra-index');
+}
+
 export class VectorMemory {
   private indexPath: string;
   private embeddingModel: string;
@@ -16,7 +26,7 @@ export class VectorMemory {
   private initialized = false;
 
   constructor(options: VectorMemoryOptions = {}) {
-    this.indexPath = options.indexPath ?? path.join(process.cwd(), '.vectra-index');
+    this.indexPath = options.indexPath ?? defaultIndexPath();
     this.embeddingModel = options.embeddingModel ?? 'Xenova/all-MiniLM-L6-v2';
     this.chunkSize = options.chunkSize ?? 500;
     this.overlap = options.overlap ?? 50;

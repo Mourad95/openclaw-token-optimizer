@@ -2,6 +2,14 @@
 
 ## 🚨 Common Issues and Solutions
 
+### Gateway / Telegram
+
+#### Issue: `memory_search` fails with `ENOENT: lstat '/.vectra-index'` (or similar under `/`)
+
+**Cause:** The OpenClaw gateway process often has **`process.cwd()` = `/`**. This project used to put the Vectra index at `join(cwd, '.vectra-index')`, which resolved to **`/.vectra-index`** (invalid).
+
+**Fix:** Use **openclaw-token-optimizer ≥** the version where the default index path is next to the **package** (`dist/...` → repo `.vectra-index`), not the cwd. Rebuild and restart the gateway: `npm run build && openclaw gateway restart`. Optional override: `OPENCLAW_TOKEN_OPTIMIZER_INDEX_PATH=/chemin/vers/.vectra-index`.
+
 ### Installation Problems
 
 #### Issue: `Invalid config` / `memorySearch.provider: Invalid input` after setup

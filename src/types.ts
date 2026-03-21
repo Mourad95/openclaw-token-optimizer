@@ -63,6 +63,8 @@ export interface AnalysisResult {
 export interface MemorySearchOptions {
   maxResults?: number;
   maxTokens?: number;
+  /** OpenClaw gateway workspace root (memory/ lives under it). */
+  workspaceDir?: string;
 }
 
 export interface MaintenanceOptions {
