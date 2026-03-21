@@ -6,6 +6,12 @@ import * as fs from 'fs';
 import type { MemorySearchOptions, MaintenanceOptions } from './types';
 import { logger } from './logger';
 import { ModelLoadError } from './errors';
+import {
+  loadMetrics,
+  resolveMetricsFilePath,
+  averageSavingsPercent,
+  type CumulativeTokenMetrics,
+} from './metrics-store';
 
 export class OpenClawTokenOptimizerPlugin {
   optimizer: TokenOptimizer;
@@ -108,12 +114,18 @@ export class OpenClawTokenOptimizerPlugin {
     vectorMemory: Awaited<ReturnType<TokenOptimizer['vectorMemory']['getStats']>>;
     performance: ReturnType<TokenOptimizer['getPerformanceStats']>;
     settings: { maxContextLength: number; maxTokens: number };
+    /** Disk-persisted totals (all sessions/processes; excludes in-memory cache). */
+    metrics: {
+      filePath: string;
+      cumulative: CumulativeTokenMetrics & { averageSavingsPercent: number };
+    };
   }> {
     await this.initialize();
 
     const vectorStats = await this.optimizer.vectorMemory.getStats();
     const performanceStats = this.optimizer.getPerformanceStats();
     const memoryDir = this.getMemoryDir();
+    const persisted = loadMetrics();
 
     return {
       plugin: {
@@ -127,6 +139,13 @@ export class OpenClawTokenOptimizerPlugin {
       settings: {
         maxContextLength: this.optimizer.maxContextLength,
         maxTokens: this.optimizer.maxTokens,
+      },
+      metrics: {
+        filePath: resolveMetricsFilePath(),
+        cumulative: {
+          ...persisted.cumulative,
+          averageSavingsPercent: averageSavingsPercent(persisted.cumulative),
+        },
       },
     };
   }
@@ -228,6 +247,22 @@ async function main(): Promise<void> {
       break;
     }
 
+    case 'metrics': {
+      const m = loadMetrics();
+      const avg = averageSavingsPercent(m.cumulative);
+      console.log(
+        JSON.stringify(
+          {
+            filePath: resolveMetricsFilePath(),
+            cumulative: { ...m.cumulative, averageSavingsPercent: avg },
+          },
+          null,
+          2
+        )
+      );
+      break;
+    }
+
     case 'analyze': {
       const analysis = await plugin.analyzeSavings();
       console.log(JSON.stringify(analysis, null, 2));
@@ -288,6 +323,7 @@ async function main(): Promise<void> {
       console.log('  node openclaw-plugin.js memory-search          # OpenClaw integration (reads from stdin)');
       console.log('  node openclaw-plugin.js search <query> [limit] # Manual search');
       console.log('  node openclaw-plugin.js stats                  # Get plugin statistics');
+      console.log('  node openclaw-plugin.js metrics                # Cumulative token savings (persisted)');
       console.log('  node openclaw-plugin.js analyze                # Analyze token savings');
       console.log('  node openclaw-plugin.js maintenance [--rebuild] [--clear-cache]');
       console.log('  node openclaw-plugin.js add "<user>" "<assistant>"');

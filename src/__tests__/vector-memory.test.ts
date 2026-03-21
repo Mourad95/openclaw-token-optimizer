@@ -2,7 +2,7 @@ import { describe, test, expect, jest, beforeEach } from '@jest/globals';
 import { VectorMemory } from '../vector-memory';
 import { mockVectra, mockTransformers } from './mocks';
 
-// Mock des dépendances
+// Mock dependencies
 jest.mock('vectra', () => mockVectra);
 jest.mock('@xenova/transformers', () => mockTransformers);
 
@@ -71,7 +71,7 @@ describe('VectorMemory', () => {
       const customMemory = new VectorMemory({ memoryDir: '/custom/path' });
       await customMemory.initialize();
       
-      // Vérifier que le chemin personnalisé est utilisé
+      // Custom path should be used
       expect(mockVectra.LocalIndex).toHaveBeenCalledWith(
         expect.objectContaining({
           folder: expect.stringContaining('/custom/path')
@@ -134,7 +134,7 @@ describe('VectorMemory', () => {
     });
 
     test('should filter by minScore', async () => {
-      // Simuler des résultats avec différents scores
+      // Simulate results with different scores
       mockIndex.query.mockResolvedValueOnce([
         { item: { text: 'High score', metadata: {} }, score: 0.9 },
         { item: { text: 'Medium score', metadata: {} }, score: 0.6 },
@@ -218,7 +218,7 @@ describe('VectorMemory', () => {
     test('should generate embeddings for text', async () => {
       await vectorMemory.initialize();
       
-      // L'embedding est généré via le mock
+      // Embedding comes from the mock
       expect(mockTransformers.pipeline).toHaveBeenCalledWith(
         'feature-extraction',
         expect.any(String)
@@ -228,11 +228,11 @@ describe('VectorMemory', () => {
     test('should cache embeddings for performance', async () => {
       await vectorMemory.initialize();
       
-      // Deux recherches avec la même requête
+      // Two searches with the same query
       await vectorMemory.searchMemories('same query', 3);
       await vectorMemory.searchMemories('same query', 3);
 
-      // Le pipeline ne devrait être appelé qu'une fois (cache)
+      // Pipeline should run once (cache)
       expect(mockTransformers.pipeline).toHaveBeenCalledTimes(1);
     });
   });

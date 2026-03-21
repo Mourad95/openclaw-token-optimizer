@@ -3,7 +3,7 @@ import { execSync } from 'child_process';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
-// Mock pour éviter les appels réels
+// Mock to avoid real subprocess calls
 jest.mock('child_process', () => ({
   execSync: jest.fn()
 }));
@@ -251,7 +251,7 @@ Processing: memory/2024-01-03.md ✓
 
   describe('Configuration Validation', () => {
     test('should validate environment variables', () => {
-      // Test avec variables d'environnement
+      // Test with environment variables
       process.env.OPENCLAW_MEMORY_DIR = '/test/memory';
       
       (execSync as jest.Mock).mockReturnValue(Buffer.from('Using memory dir: /test/memory'));

@@ -1,4 +1,4 @@
-// key-management.ts - Gestion des clés API
+// key-management.ts — API key storage helpers
 
 import { ApiKey } from './auth';
 
@@ -11,72 +11,72 @@ export class KeyManager {
 
   constructor() {}
 
-  // Générer une nouvelle clé API
+  // Generate a new API key
   generateKey(name: string): ApiKey {
     const { generateApiKey } = require('./auth');
     const apiKey = generateApiKey(name);
-    
+
     this.store[apiKey.key] = apiKey;
     return apiKey;
   }
 
-  // Valider une clé API
+  // Validate an API key
   validateKey(apiKey: string): boolean {
     const key = this.store[apiKey];
     if (!key) return false;
     if (!key.enabled) return false;
-    
-    // Mettre à jour la date d'utilisation
+
+    // Update last-used timestamp
     key.lastUsed = new Date();
     return true;
   }
 
-  // Révoquer une clé API
+  // Revoke an API key
   revokeKey(apiKey: string): boolean {
     const key = this.store[apiKey];
     if (!key) return false;
-    
+
     key.enabled = false;
     return true;
   }
 
-  // Réactiver une clé API
+  // Re-enable an API key
   enableKey(apiKey: string): boolean {
     const key = this.store[apiKey];
     if (!key) return false;
-    
+
     key.enabled = true;
     return true;
   }
 
-  // Lister toutes les clés
+  // List all keys
   listKeys(): ApiKey[] {
     return Object.values(this.store);
   }
 
-  // Lister les clés actives
+  // List active keys
   listActiveKeys(): ApiKey[] {
-    return Object.values(this.store).filter(key => key.enabled);
+    return Object.values(this.store).filter((key) => key.enabled);
   }
 
-  // Lister les clés révoquées
+  // List revoked keys
   listRevokedKeys(): ApiKey[] {
-    return Object.values(this.store).filter(key => !key.enabled);
+    return Object.values(this.store).filter((key) => !key.enabled);
   }
 
-  // Supprimer une clé
+  // Delete a key
   deleteKey(apiKey: string): boolean {
     if (!this.store[apiKey]) return false;
-    
+
     delete this.store[apiKey];
     return true;
   }
 
-  // Nettoyer les clés expirées (optionnel)
+  // Remove expired keys (optional housekeeping)
   cleanupExpiredKeys(maxAgeDays: number = 90): number {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - maxAgeDays);
-    
+
     let deleted = 0;
     for (const [key, data] of Object.entries(this.store)) {
       if (data.createdAt < cutoff && !data.enabled) {
@@ -84,7 +84,7 @@ export class KeyManager {
         deleted++;
       }
     }
-    
+
     return deleted;
   }
 }

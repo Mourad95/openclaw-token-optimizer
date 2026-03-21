@@ -4,6 +4,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
 import { OpenClawTokenOptimizerPlugin } from '../src/openclaw-plugin';
+import {
+  DEFAULT_MEMORY_EMBEDDING_FALLBACK,
+  DEFAULT_OLLAMA_EMBEDDING_MODEL,
+} from '../src/openclaw-memory-defaults';
 
 const chalk = require('chalk').default || require('chalk');
 const ora = require('ora').default || require('ora');
@@ -97,6 +101,58 @@ class SetupScript {
     }
   }
 
+  /**
+   * OpenClaw 2026.3+ only allows memorySearch.provider in
+   * openai | local | gemini | voyage | mistral | ollama — not "custom" + command.
+   * Strip legacy keys written by older versions of this setup script.
+   * @see https://docs.openclaw.ai/reference/memory-config
+   */
+  static sanitizeMemorySearch(ms: Record<string, unknown> | undefined): Record<string, unknown> {
+    const out: Record<string, unknown> = { ...(ms ?? {}) };
+    delete out.command;
+    delete out.maxResults;
+    delete out.maxTokens;
+    if (out.provider === 'custom') {
+      delete out.provider;
+    }
+    return out;
+  }
+
+  /**
+   * When OPENCLAW_TOKEN_OPTIMIZER_OLLAMA_MEMORY=1|true|yes, force memory embeddings via Ollama
+   * and optional cloud fallback (small embedding models — used only if Ollama fails).
+   * @see docs/openclaw-memory-ollama.md
+   */
+  static shouldUseOllamaMemoryEmbeddings(): boolean {
+    const v = process.env.OPENCLAW_TOKEN_OPTIMIZER_OLLAMA_MEMORY?.trim().toLowerCase();
+    return v === '1' || v === 'true' || v === 'yes';
+  }
+
+  /** Default: {@link DEFAULT_MEMORY_EMBEDDING_FALLBACK}; override with OPENCLAW_MEMORY_EMBEDDING_FALLBACK */
+  static resolveEmbeddingFallback(): string {
+    const raw = process.env.OPENCLAW_MEMORY_EMBEDDING_FALLBACK?.trim().toLowerCase();
+    if (!raw) return DEFAULT_MEMORY_EMBEDDING_FALLBACK;
+    const allowed = new Set(['gemini', 'openai', 'none', 'mistral', 'voyage', 'local', 'ollama']);
+    return allowed.has(raw) ? raw : DEFAULT_MEMORY_EMBEDDING_FALLBACK;
+  }
+
+  static applyOllamaMemoryEmbeddings(memorySearch: Record<string, unknown>): Record<string, unknown> {
+    if (!SetupScript.shouldUseOllamaMemoryEmbeddings()) {
+      return memorySearch;
+    }
+
+    const model =
+      process.env.OPENCLAW_OLLAMA_EMBEDDING_MODEL?.trim() || DEFAULT_OLLAMA_EMBEDDING_MODEL;
+    const fallback = SetupScript.resolveEmbeddingFallback();
+
+    return {
+      ...memorySearch,
+      provider: 'ollama',
+      model,
+      fallback,
+    };
+  }
+
   backupConfig(): Record<string, unknown> {
     if (!fs.existsSync(this.openclawConfigPath)) {
       console.log(chalk.yellow('  ℹ No existing OpenClaw configuration found'));
@@ -129,13 +185,42 @@ class SetupScript {
     if (!config.agents) config.agents = {};
     if (!config.agents.defaults) config.agents.defaults = {};
 
-    config.agents.defaults.memorySearch = {
-      enabled: true,
-      provider: 'custom',
-      command: `node "${this.pluginPath}" memory-search`,
-      maxResults: 5,
-      maxTokens: 1000,
+    const memoryDirAbs = path.resolve(process.cwd(), 'memory');
+    const prev = SetupScript.sanitizeMemorySearch(
+      config.agents.defaults.memorySearch as Record<string, unknown> | undefined
+    );
+    const extraPathsRaw = prev.extraPaths;
+    const extraPaths: string[] = Array.isArray(extraPathsRaw)
+      ? extraPathsRaw.filter((p): p is string => typeof p === 'string')
+      : [];
+    if (!extraPaths.includes(memoryDirAbs)) {
+      extraPaths.push(memoryDirAbs);
+    }
+
+    let memorySearch: Record<string, unknown> = {
+      ...prev,
+      extraPaths,
     };
+    if (memorySearch.enabled === undefined) {
+      memorySearch.enabled = true;
+    }
+
+    memorySearch = SetupScript.applyOllamaMemoryEmbeddings(memorySearch);
+
+    config.agents.defaults.memorySearch = memorySearch;
+
+    console.log(
+      chalk.gray(
+        '  ✓ memorySearch: removed legacy custom/command keys if present; set extraPaths for this repo'
+      )
+    );
+    if (SetupScript.shouldUseOllamaMemoryEmbeddings()) {
+      console.log(
+        chalk.gray(
+          `  ✓ memorySearch: Ollama provider (${String(memorySearch.model)}) · fallback=${String(memorySearch.fallback)}`
+        )
+      );
+    }
 
     const configDir = path.dirname(this.openclawConfigPath);
     if (!fs.existsSync(configDir)) {
@@ -204,11 +289,21 @@ class SetupScript {
         vectraIndex: path.join(process.cwd(), '.vectra-index'),
       },
       configuration: {
-        memorySearch: { enabled: true, provider: 'custom', maxResults: 5, maxTokens: 1000 },
+        memorySearch: {
+          note: 'extraPaths points OpenClaw at this repo memory/; use a supported provider (local, openai, …) per OpenClaw docs',
+          extraPaths: [path.resolve(process.cwd(), 'memory')],
+        },
       },
       nextSteps: [
+        'Configure embedding provider if needed: https://docs.openclaw.ai/reference/memory-config',
+        ...(SetupScript.shouldUseOllamaMemoryEmbeddings()
+          ? [
+              `Ollama embeddings: pull model — ollama pull ${process.env.OPENCLAW_OLLAMA_EMBEDDING_MODEL?.trim() || DEFAULT_OLLAMA_EMBEDDING_MODEL}`,
+              'Docs: docs/openclaw-memory-ollama.md',
+            ]
+          : []),
         'Restart OpenClaw gateway: openclaw gateway restart',
-        'Test with: node dist/src/index.js search "your query"',
+        'Standalone CLI search: node dist/src/index.js search "your query"',
         'Add memory files to the "memory" directory',
         'Run maintenance weekly: npm run maintenance',
       ],
@@ -247,27 +342,35 @@ class SetupScript {
     console.log(chalk.gray(`Steps completed: ${successful}/${total}`));
 
     console.log(chalk.cyan('\n📋 Next Steps:'));
-    console.log(chalk.gray('1. Restart OpenClaw gateway:'));
+    console.log(
+      chalk.gray(
+        '1. OpenClaw 2026.3+ uses built-in memorySearch providers (not custom shell commands).'
+      )
+    );
+    console.log(
+      chalk.gray(
+        '   This setup adds extraPaths so your notes under ./memory are indexed. Pick a provider in ~/.openclaw/openclaw.json if needed (see docs).'
+      )
+    );
+    console.log(chalk.gray('2. Restart OpenClaw gateway:'));
     console.log(chalk.yellow('   openclaw gateway restart\n'));
 
-    console.log(chalk.gray('2. Verify the integration:'));
+    console.log(chalk.gray('3. Verify:'));
     console.log(chalk.yellow('   openclaw status\n'));
 
-    console.log(chalk.gray('3. Test the optimizer:'));
+    console.log(chalk.gray('4. Local vectra CLI (this repo, separate from OpenClaw embeddings):'));
     console.log(chalk.yellow('   node dist/src/index.js search "test query"\n'));
 
-    console.log(chalk.gray('4. Add your memory files to:'));
+    console.log(chalk.gray('5. Memory files:'));
     console.log(chalk.yellow(`   ${path.join(process.cwd(), 'memory')}\n`));
 
-    console.log(chalk.gray('5. Run weekly maintenance:'));
+    console.log(chalk.gray('6. Weekly maintenance:'));
     console.log(chalk.yellow('   npm run maintenance\n'));
 
     console.log(chalk.cyan('📚 Documentation:'));
-    console.log(chalk.gray('• README.md - Getting started guide'));
-    console.log(chalk.gray('• docs/ - Advanced usage and API reference'));
-    console.log(chalk.gray('• examples/ - Integration examples\n'));
-
-    console.log(chalk.green('✅ Your OpenClaw token consumption will now be optimized by 70-90%!'));
+    console.log(chalk.gray('• OpenClaw memory: https://docs.openclaw.ai/reference/memory-config'));
+    console.log(chalk.gray('• README.md — this project'));
+    console.log(chalk.gray('• docs/ — advanced usage\n'));
   }
 }
 

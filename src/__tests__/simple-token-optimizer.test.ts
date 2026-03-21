@@ -1,6 +1,6 @@
 import { describe, test, expect, jest, beforeEach } from '@jest/globals';
 
-// Tests simples pour vérifier que Jest fonctionne
+// Minimal tests to verify Jest runs
 describe('Simple Token Optimizer Tests', () => {
   test('basic test should pass', () => {
     expect(1 + 1).toBe(2);

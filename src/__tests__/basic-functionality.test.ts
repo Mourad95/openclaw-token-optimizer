@@ -1,6 +1,6 @@
 import { describe, test, expect } from '@jest/globals';
 
-// Tests de base pour vérifier la fonctionnalité essentielle
+// Basic tests for core behavior
 describe('Basic Functionality Tests', () => {
   describe('String Operations', () => {
     test('should calculate token estimates', () => {
@@ -90,9 +90,9 @@ describe('Basic Functionality Tests', () => {
         }
       });
       
-      expect(hits).toBe(2); // query1 et query2 répétés
+      expect(hits).toBe(2); // query1 and query2 repeated
       expect(misses).toBe(3); // query1, query2, query3 initiaux
-      expect(cache.size).toBe(3); // 3 entrées uniques
+      expect(cache.size).toBe(3); // 3 unique entries
     });
 
     test('should calculate cache hit rate', () => {
@@ -146,14 +146,14 @@ describe('Configuration Validation', () => {
 
   test('should handle invalid configuration', () => {
     const invalidConfigs = [
-      { maxTokens: -100 }, // Négatif
-      { maxContextLength: 0 }, // Zéro
+      { maxTokens: -100 }, // negative
+      { maxContextLength: 0 }, // zero
       { minRelevanceScore: 1.5 }, // > 1
-      { cacheSize: -10 } // Négatif
+      { cacheSize: -10 } // negative
     ];
 
     invalidConfigs.forEach(config => {
-      // Dans un vrai système, ces devraient échouer
+      // In a real system these should fail validation
       const isValid = 
         (config.maxTokens === undefined || config.maxTokens > 0) &&
         (config.maxContextLength === undefined || config.maxContextLength > 0) &&

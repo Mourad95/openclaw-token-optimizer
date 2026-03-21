@@ -2,7 +2,7 @@ import { describe, test, expect, jest, beforeEach } from '@jest/globals';
 import { OpenClawTokenOptimizerPlugin } from '../openclaw-plugin';
 import { mockVectra, mockTransformers, mockChalk, mockOra } from './mocks';
 
-// Mock des dépendances
+// Mock dependencies
 jest.mock('vectra', () => mockVectra);
 jest.mock('@xenova/transformers', () => mockTransformers);
 jest.mock('chalk', () => mockChalk);
@@ -43,7 +43,7 @@ describe('OpenClawTokenOptimizerPlugin', () => {
     });
 
     test('should handle initialization errors', async () => {
-      // Simuler une erreur d'initialisation
+      // Simulate init failure
       mockVectra.LocalIndex.mockImplementationOnce(() => ({
         isIndexCreated: jest.fn().mockRejectedValue(new Error('Failed to create index'))
       }));
@@ -78,7 +78,7 @@ describe('OpenClawTokenOptimizerPlugin', () => {
         maxResults: 1
       });
 
-      // Le résultat devrait contenir au plus 1 élément
+      // At most one result
       expect(result.context.length).toBeLessThanOrEqual(1);
     });
 
@@ -87,14 +87,14 @@ describe('OpenClawTokenOptimizerPlugin', () => {
         maxResults: 5
       });
 
-      // Vérifier que l'optimisation est appliquée
+      // Optimization should be applied
       expect(result.stats.savingsPercent).toBeGreaterThanOrEqual(0);
       expect(result.stats.duplicatesRemoved).toBeDefined();
       expect(result.stats.originalTokens).toBeGreaterThanOrEqual(result.stats.estimatedTokens);
     });
 
     test('should handle empty search results', async () => {
-      // Simuler des résultats vides
+      // Simulate empty results
       const mockIndex = mockVectra.LocalIndex();
       mockIndex.query.mockResolvedValueOnce([]);
 
@@ -112,7 +112,7 @@ describe('OpenClawTokenOptimizerPlugin', () => {
     test('should return comprehensive statistics', async () => {
       await plugin.initialize();
       
-      // Exécuter quelques recherches
+      // Run a few searches
       await plugin.memorySearch('query 1', { maxResults: 2 });
       await plugin.memorySearch('query 2', { maxResults: 2 });
       await plugin.memorySearch('query 1', { maxResults: 2 }); // Cache hit
@@ -124,23 +124,23 @@ describe('OpenClawTokenOptimizerPlugin', () => {
       expect(stats).toHaveProperty('settings');
       expect(stats).toHaveProperty('memory');
 
-      // Vérifier les statistiques du plugin
+      // Plugin stats
       expect(stats.plugin.initialized).toBe(true);
       expect(stats.plugin.version).toBeDefined();
       expect(stats.plugin.name).toBeDefined();
 
-      // Vérifier les statistiques de performance
+      // Performance stats
       expect(stats.performance.totalQueries).toBe(3);
       expect(stats.performance.cacheHits).toBe(1);
       expect(stats.performance.cacheHitRate).toBeDefined();
       expect(stats.performance.averageResponseTime).toBeGreaterThanOrEqual(0);
 
-      // Vérifier les paramètres
+      // Settings
       expect(stats.settings.maxTokens).toBe(1000);
       expect(stats.settings.maxContextLength).toBe(1500);
       expect(stats.settings.minRelevanceScore).toBe(0.4);
 
-      // Vérifier les statistiques mémoire
+      // Memory stats
       expect(stats.memory.totalMemories).toBeDefined();
       expect(stats.memory.indexSize).toBeDefined();
     });
@@ -148,13 +148,13 @@ describe('OpenClawTokenOptimizerPlugin', () => {
     test('should reset statistics', async () => {
       await plugin.initialize();
       
-      // Exécuter quelques recherches
+      // Run a few searches
       await plugin.memorySearch('query 1', { maxResults: 2 });
       
       const statsBefore = await plugin.getStats();
       expect(statsBefore.performance.totalQueries).toBe(1);
 
-      // Réinitialiser les statistiques
+      // Reset stats
       const resetResult = await plugin.resetStats();
       expect(resetResult.success).toBe(true);
 
@@ -185,15 +185,15 @@ describe('OpenClawTokenOptimizerPlugin', () => {
     test('should validate configuration updates', async () => {
       await plugin.initialize();
       
-      // Configuration invalide
+      // Invalid config
       await expect(plugin.updateConfig({
-        maxTokens: -100, // Invalide
-        cacheSize: 0     // Invalide
+        maxTokens: -100, // invalid
+        cacheSize: 0     // invalid
       })).rejects.toThrow();
 
-      // Vérifier que la configuration n'a pas changé
+      // Config should be unchanged
       const stats = await plugin.getStats();
-      expect(stats.settings.maxTokens).toBe(1000); // Valeur par défaut
+      expect(stats.settings.maxTokens).toBe(1000); // default
     });
   });
 
@@ -201,11 +201,11 @@ describe('OpenClawTokenOptimizerPlugin', () => {
     test('should handle invalid search parameters', async () => {
       await plugin.initialize();
       
-      // Query vide
+      // Empty query
       await expect(plugin.memorySearch('', { maxResults: 5 }))
         .rejects.toThrow('Query cannot be empty');
       
-      // maxResults invalide
+      // Invalid maxResults
       await expect(plugin.memorySearch('test', { maxResults: 0 }))
         .rejects.toThrow('maxResults must be greater than 0');
       
@@ -226,7 +226,7 @@ describe('OpenClawTokenOptimizerPlugin', () => {
     test('should handle search timeout', async () => {
       await plugin.initialize();
       
-      // Simuler un timeout
+      // Simulate timeout
       const mockIndex = mockVectra.LocalIndex();
       mockIndex.query.mockImplementationOnce(() => 
         new Promise((_, reject) => 
@@ -243,7 +243,7 @@ describe('OpenClawTokenOptimizerPlugin', () => {
     test('should clear cache', async () => {
       await plugin.initialize();
       
-      // Ajouter des éléments au cache
+      // Populate cache
       await plugin.memorySearch('cache test 1', { maxResults: 2 });
       await plugin.memorySearch('cache test 2', { maxResults: 2 });
 
@@ -256,7 +256,7 @@ describe('OpenClawTokenOptimizerPlugin', () => {
     test('should return cache statistics', async () => {
       await plugin.initialize();
       
-      // Utiliser le cache
+      // Exercise cache
       await plugin.memorySearch('query 1', { maxResults: 2 });
       await plugin.memorySearch('query 1', { maxResults: 2 }); // Cache hit
       await plugin.memorySearch('query 2', { maxResults: 2 }); // Cache miss
@@ -265,7 +265,7 @@ describe('OpenClawTokenOptimizerPlugin', () => {
       
       expect(stats.performance.cacheHits).toBe(1);
       expect(stats.performance.cacheMisses).toBe(2);
-      expect(stats.performance.cacheHitRate).toBe('33%'); // 1 hit / 3 requêtes
+      expect(stats.performance.cacheHitRate).toBe('33%'); // 1 hit / 3 queries
     });
   });
 });

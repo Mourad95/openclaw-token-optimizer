@@ -1,7 +1,7 @@
 import { describe, test, expect, jest, beforeEach } from '@jest/globals';
 import { TokenOptimizer } from '../token-optimizer';
 
-// Mock simple pour VectorMemory
+// Simple VectorMemory mock
 jest.mock('../vector-memory', () => {
   return {
     VectorMemory: jest.fn().mockImplementation(() => ({
@@ -59,7 +59,7 @@ describe('TokenOptimizer - Working Tests', () => {
 
     test('should initialize vector memory', async () => {
       await optimizer.initialize();
-      // Vérifier que initialize a été appelé
+      // initialize should have been called
       expect(optimizer.vectorMemory.initialize).toHaveBeenCalled();
     });
   });
@@ -174,11 +174,11 @@ describe('Integration Tests', () => {
     const result1 = await optimizer.getOptimizedContext(query, 2);
     const result2 = await optimizer.getOptimizedContext(query, 2);
     
-    // Les résultats devraient être similaires
+    // Results should be similar
     expect(result1.context).toBe(result2.context);
     expect(result1.stats.estimatedTokens).toBe(result2.stats.estimatedTokens);
     
     const stats = optimizer.getPerformanceStats();
-    expect(stats.cacheHits).toBe(1); // Une requête a dû être cachée
+    expect(stats.cacheHits).toBe(1); // one request should be cached
   });
 });

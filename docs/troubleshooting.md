@@ -4,6 +4,18 @@
 
 ### Installation Problems
 
+#### Issue: `Invalid config` / `memorySearch.provider: Invalid input` after setup
+
+**Symptoms:** `openclaw gateway restart` fails; errors mention `provider: "custom"`, or unknown keys `command`, `maxResults`, `maxTokens`.
+
+**Cause:** OpenClaw **2026.3+** only allows `memorySearch.provider` values like `local`, `openai`, `gemini`, etc. Older docs for this project used `custom` + a shell `command`, which the gateway rejects.
+
+**Fix:**
+
+1. Re-run setup from a built tree: `npm run build && npm run setup` (it strips legacy keys and sets `extraPaths`).
+2. Or edit `~/.openclaw/openclaw.json` manually: remove `command`, `maxResults`, `maxTokens`, and `provider: "custom"`; set a [supported provider](https://docs.openclaw.ai/reference/memory-config) or omit `provider` for auto-selection.
+3. Or restore the backup created beside your config (`openclaw.json.backup-*`), then run setup again.
+
 #### Issue: "OpenClaw not found"
 **Symptoms**: Setup script fails with "OpenClaw not found" error.
 
@@ -21,6 +33,12 @@ export PATH="$PATH:/path/to/openclaw/bin"
 # 4. Verify installation
 openclaw --version
 ```
+
+#### Issue: `npm audit fix --force` runs forever or suggests `openclaw@0.0.1`
+
+**Cause:** The resolver can spin for a long time, and `--force` applies **unsafe** major upgrades (wrong `openclaw` version, breaking `vectra`, etc.).
+
+**What to do:** Press **Ctrl+C** to stop. **Do not use** `npm audit fix --force` here. Use plain `npm install`. Install the OpenClaw **CLI** globally (`npm install -g openclaw`); this package only declares an optional peer so npm does not need to pull OpenClaw into `node_modules`. Treat remaining audit items as transitive noise until you upgrade dependencies deliberately.
 
 #### Issue: "Permission denied" during setup
 **Symptoms**: Setup script fails with permission errors.
@@ -62,17 +80,59 @@ node --version
 
 ### Configuration Problems
 
+#### Issue: `Config path not found: memorySearch` (OpenClaw CLI)
+
+**Symptoms:** `openclaw config get memorySearch` prints something like *Config path not found: memorySearch*.
+
+**Cause:** In OpenClaw **2026.3+**, memory search settings live under **`agents.defaults.memorySearch`**, not at the top level of `openclaw.json`.
+
+**Fix:**
+
+```bash
+openclaw config get agents.defaults.memorySearch
+# or inspect the file:
+grep -A20 '"agents"' ~/.openclaw/openclaw.json | head -40
+```
+
+#### Issue: Agent searches an **old** folder (`openclaw-integration`, etc.) instead of this repo’s `memory/`
+
+**Symptoms:** On Telegram (or elsewhere), the model runs **Exec** / **find** / **grep** under `~/Documents/openclaw-integration/...` and does **not** surface content from `openclaw-token-optimizer/memory/`.
+
+**Why this happens:**
+
+1. **`memorySearch.extraPaths` is not the only source of truth.** The model may choose **filesystem tools** (`exec`, `read`) using its **default working directory** or **instructions** that still mention the old project.
+2. **Setup from this repo *adds* to `extraPaths`** — it does not remove previous paths. An old `memory/` path can remain indexed while your new test file lives elsewhere.
+3. **Semantic memory** may not be invoked for every question; the agent can “helpfully” shell-grep a path it already knows.
+
+**What to do:**
+
+1. **Re-run setup from the correct clone** (so the right `memory/` path is added):
+
+   ```bash
+   cd /path/to/openclaw-token-optimizer
+   npm run build && npm run setup
+   # or: npm run setup:ollama
+   openclaw gateway restart
+   ```
+
+2. **Inspect and clean `extraPaths`:** Open `~/.openclaw/openclaw.json`, find `agents.defaults.memorySearch.extraPaths`, and ensure it includes **only** the directories you want (e.g. `.../openclaw-token-optimizer/memory`). **Remove** stale entries like `.../openclaw-integration/memory` if you no longer want them. Restart the gateway.
+
+3. **Update agent workspace / bootstrap:** Search your OpenClaw config and bootstrap files for `openclaw-integration` or old paths. Align **workspace**, **tools.fs** limits, and **agent instructions** with the new repo if your build uses a fixed project root.
+
+4. **Re-index memory** after path changes (per OpenClaw docs), e.g. `openclaw memory index --force` if available, then restart the gateway.
+
+5. **Quick check:** `openclaw config get agents.defaults.memorySearch` — confirm `extraPaths` points at the **`memory/` folder where your test `.md` file actually lives.**
+
 #### Issue: "Plugin not working with OpenClaw"
 **Symptoms**: OpenClaw doesn't use the token optimizer for memory searches.
 
 **Solutions**:
 ```bash
-# 1. Check OpenClaw configuration
-openclaw config get memorySearch
+# 1. Check OpenClaw memorySearch (nested path — not top-level memorySearch)
+openclaw config get agents.defaults.memorySearch
 
-# 2. Verify the plugin path is correct
-# The command should point to dist/src/openclaw-plugin.js (after npm run build)
-cat ~/.openclaw/openclaw.json | grep -A5 memorySearch
+# 2. Confirm extraPaths includes this repo’s memory/ and provider is supported (not legacy "custom" + command)
+cat ~/.openclaw/openclaw.json | grep -A15 memorySearch
 
 # 3. Restart OpenClaw gateway
 openclaw gateway restart
@@ -80,8 +140,8 @@ openclaw gateway restart
 # 4. Check OpenClaw logs
 openclaw gateway logs
 
-# 5. Test the plugin directly
-node dist/src/openclaw-plugin.js search "test"
+# 5. Test the optimizer CLI (same embeddings/index as local dev)
+npm run build && node dist/src/index.js search "test"
 ```
 
 #### Issue: "Failed to load embedding model"
@@ -286,6 +346,25 @@ openclaw-token-optimizer search "query" -v
 ```
 
 ### Vector Memory Problems
+
+#### Issue: JavaScript heap out of memory during indexing
+
+**Symptoms:** The process dies while “Indexing memory files…” with `FATAL ERROR: ... heap out of memory` (often near Node’s default ~4 GB cap).
+
+**Cause:** Local embeddings (`@xenova/transformers`) plus the vector index can use a lot of heap on first run or large `memory/` trees.
+
+**Fix:**
+
+```bash
+# Prefer npm scripts — index/analyze/setup use a higher heap limit
+npm run index
+npm run setup
+
+# If you call node directly, raise the heap yourself
+NODE_OPTIONS=--max-old-space-size=8192 node dist/src/index.js index
+```
+
+If it still fails on a low-RAM machine: trim or split large files under `memory/`, run `npm run index -- --clear` after backing up `.vectra-index`, or lower chunk size in `src/vector-memory.ts` and rebuild.
 
 #### Issue: "Embedding model fails to load"
 **Symptoms**: Error loading Xenova/transformers model.
@@ -496,7 +575,7 @@ node dist/src/openclaw-plugin.js search "diagnostic" 2>&1 | tail -5
 echo ""
 
 echo "6. OpenClaw Configuration:"
-openclaw config get memorySearch 2>/dev/null || echo "Cannot read config"
+openclaw config get agents.defaults.memorySearch 2>/dev/null || echo "Cannot read config"
 echo ""
 
 echo "=== End Diagnostics ==="

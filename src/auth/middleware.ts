@@ -1,9 +1,9 @@
-// middleware.ts - Middleware d'authentification pour Express
+// middleware.ts — Express authentication middleware
 
 import { Request, Response, NextFunction } from 'express';
 import { AuthConfig, authenticateRequest } from './auth';
 
-// Middleware pour Express
+// Express middleware factory
 export const authenticateMiddleware = (config: AuthConfig = {}) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const apiKeyHeader = config.apiKeyHeader || 'x-api-key';
@@ -24,7 +24,7 @@ export const authenticateMiddleware = (config: AuthConfig = {}) => {
       });
     }
     
-    // Ajouter les informations d'authentification à la requête
+    // Attach auth info to the request
     (req as any).auth = {
       authenticated: true,
       payload: result.payload
@@ -34,7 +34,7 @@ export const authenticateMiddleware = (config: AuthConfig = {}) => {
   };
 };
 
-// Middleware pour les rôles
+// Role guard middleware
 export const requireRole = (role: string) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const auth = (req as any).auth;

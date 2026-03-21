@@ -1,4 +1,4 @@
-// auth.ts - Module d'authentification pour openclaw-token-optimizer
+// auth.ts — authentication module for openclaw-token-optimizer
 
 import * as jwt from 'jsonwebtoken';
 import { SECRET_KEY, API_KEY_PREFIX, JWT_EXPIRATION } from './config';
@@ -23,22 +23,22 @@ export interface JwtPayload {
   exp?: number;
 }
 
-// Validation d'une clé API
+// Validate API key format
 export const isValidApiKey = (apiKey: string): boolean => {
   if (!apiKey || typeof apiKey !== 'string') return false;
   
-  // Vérifier le préfixe
+  // Check prefix
   if (!apiKey.startsWith(API_KEY_PREFIX)) return false;
   
-  // Vérifier la longueur (préfixe + 32 caractères)
+  // Check length (prefix + 32 chars)
   const keyWithoutPrefix = apiKey.substring(API_KEY_PREFIX.length);
   if (keyWithoutPrefix.length !== 32) return false;
   
-  // Vérifier le format (hexadécimal)
+  // Check hex format
   return /^[a-f0-9]+$/i.test(keyWithoutPrefix);
 };
 
-// Générer une clé API
+// Generate an API key
 export const generateApiKey = (name: string): ApiKey => {
   const randomPart = Array.from(crypto.getRandomValues(new Uint8Array(16)))
     .map(b => b.toString(16).padStart(2, '0'))
@@ -54,7 +54,7 @@ export const generateApiKey = (name: string): ApiKey => {
   };
 };
 
-// Générer un token JWT
+// Generate a JWT
 export const generateJwtToken = (payload: Omit<JwtPayload, 'exp'>, secret?: string): string => {
   const jwtSecret = secret || SECRET_KEY;
   const expiration = JWT_EXPIRATION;
@@ -65,7 +65,7 @@ export const generateJwtToken = (payload: Omit<JwtPayload, 'exp'>, secret?: stri
   );
 };
 
-// Valider un token JWT
+// Validate a JWT
 export const validateJwtToken = (token: string, secret?: string): JwtPayload | null => {
   try {
     const jwtSecret = secret || SECRET_KEY;
@@ -76,23 +76,23 @@ export const validateJwtToken = (token: string, secret?: string): JwtPayload | n
   }
 };
 
-// Middleware d'authentification (version simplifiée pour CLI)
+// Auth helper (simplified for CLI)
 export const authenticateRequest = (
   apiKey?: string,
   jwtToken?: string,
   config?: AuthConfig
 ): { valid: boolean; error?: string; payload?: JwtPayload } => {
   
-  // Vérifier la clé API
+  // Validate API key
   if (apiKey) {
     if (!isValidApiKey(apiKey)) {
       return { valid: false, error: 'Invalid API key format' };
     }
-    // Dans une vraie implémentation, vérifier contre une base de données
+    // In production, validate against a database
     return { valid: true };
   }
   
-  // Vérifier le token JWT
+  // Validate JWT
   if (jwtToken) {
     const payload = validateJwtToken(jwtToken, config?.jwtSecret);
     if (!payload) {

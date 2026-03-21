@@ -88,23 +88,25 @@ const optimizer = new TokenOptimizer(config.tokenOptimizer);
 
 ### Integration with OpenClaw Agents
 
-Create a custom agent configuration that uses the token optimizer:
+OpenClaw **2026.3+** configures memory search under **`agents.defaults.memorySearch`** in `~/.openclaw/openclaw.json` (not a per-agent `custom` shell `command` — that pattern is rejected). Run **`npm run setup`** from this repo to set `extraPaths` and a [supported provider](https://docs.openclaw.ai/reference/memory-config), then restart the gateway.
+
+Example shape (values depend on your provider):
 
 ```json
 {
-  "id": "optimized-agent",
-  "model": "deepseek/deepseek-chat",
-  "instructions": "Use the token-optimized memory search for context.",
-  "tools": ["exec", "read", "write", "web_search"],
-  "memorySearch": {
-    "enabled": true,
-    "provider": "custom",
-    "command": "node /path/to/openclaw-token-optimizer/dist/src/openclaw-plugin.js memory-search",
-    "maxResults": 7,
-    "maxTokens": 1500
+  "agents": {
+    "defaults": {
+      "memorySearch": {
+        "enabled": true,
+        "provider": "local",
+        "extraPaths": ["/path/to/openclaw-token-optimizer/memory"]
+      }
+    }
   }
 }
 ```
+
+Verify: `openclaw config get agents.defaults.memorySearch`.
 
 ### Batch Processing
 

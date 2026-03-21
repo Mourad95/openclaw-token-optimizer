@@ -2,7 +2,7 @@ import { describe, test, expect, jest, beforeEach } from '@jest/globals';
 import { TokenOptimizer } from '../token-optimizer';
 import { mockVectra, mockTransformers, mockLogger } from './mocks';
 
-// Mock des dépendances
+// Mock dependencies
 jest.mock('vectra', () => mockVectra);
 jest.mock('@xenova/transformers', () => mockTransformers);
 
@@ -68,7 +68,7 @@ describe('TokenOptimizer', () => {
 
       const optimized = optimizer.optimizeContext(testResults, 'test-query');
 
-      // Le texte trop long devrait être tronqué ou exclu
+      // Overlong text should be truncated or excluded
       expect(optimized.optimizedResults[0].text.length).toBeLessThanOrEqual(1000);
     });
 
@@ -94,7 +94,7 @@ describe('TokenOptimizer', () => {
       const result1 = await optimizer.getOptimizedContext(query, 3);
       const result2 = await optimizer.getOptimizedContext(query, 3);
 
-      // Le cache devrait fonctionner
+      // Cache should work
       const stats = optimizer.getPerformanceStats();
       expect(stats.cacheSize).toBeGreaterThan(0);
     });
@@ -102,7 +102,7 @@ describe('TokenOptimizer', () => {
     test('should clear cache', async () => {
       await optimizer.initialize();
       
-      // Ajouter quelques requêtes au cache
+      // Add some queries to the cache
       await optimizer.getOptimizedContext('query1', 2);
       await optimizer.getOptimizedContext('query2', 2);
 
@@ -138,7 +138,7 @@ describe('TokenOptimizer', () => {
     test('should return performance statistics', async () => {
       await optimizer.initialize();
       
-      // Exécuter quelques requêtes
+      // Run a few queries
       await optimizer.getOptimizedContext('query1', 2);
       await optimizer.getOptimizedContext('query2', 2);
       await optimizer.getOptimizedContext('query1', 2); // Cache hit

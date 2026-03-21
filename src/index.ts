@@ -7,6 +7,17 @@ import { TokenOptimizer } from './token-optimizer';
 import { program } from 'commander';
 import * as fs from 'fs';
 import { ModelLoadError } from './errors';
+import {
+  loadMetrics,
+  resolveMetricsFilePath,
+  averageSavingsPercent,
+  resetMetrics,
+} from './metrics-store';
+import {
+  buildOpenClawAgentArgs,
+  resolveOpenClawBinary,
+  runOpenClawAgent,
+} from './openclaw-cli';
 
 program
   .name('openclaw-token-optimizer')
@@ -201,6 +212,21 @@ program
         chalk.gray(`Average response time: ${Math.round(stats.performance.avgResponseTime)}ms`)
       );
 
+      const cm = stats.metrics.cumulative;
+      console.log(chalk.cyan('\n=== CUMULATIVE METRICS (persisted) ==='));
+      console.log(chalk.gray(`File: ${stats.metrics.filePath}`));
+      console.log(
+        chalk.green(
+          `Tokens saved (all time): ${cm.tokensSaved.toLocaleString()} (~${cm.averageSavingsPercent}% vs potential)`
+        )
+      );
+      console.log(
+        chalk.gray(
+          `Optimizer runs recorded: ${cm.optimizerRuns.toLocaleString()} · Potential tokens (sum): ${cm.potentialTokensTotal.toLocaleString()}`
+        )
+      );
+      console.log(chalk.gray(`Last update: ${cm.updatedAt}`));
+
       console.log(chalk.cyan('\n=== SETTINGS ==='));
       console.log(chalk.gray(`Max context length: ${stats.settings.maxContextLength} chars`));
       console.log(chalk.gray(`Max tokens: ${stats.settings.maxTokens}`));
@@ -214,6 +240,122 @@ program
       process.exit(1);
     }
   });
+
+program
+  .command('metrics')
+  .description('Show cumulative token savings persisted on disk (survives restarts)')
+  .option('-j, --json', 'Output as JSON')
+  .option('--reset', 'Reset cumulative metrics file')
+  .action(async (options: { json?: boolean; reset?: boolean }) => {
+    if (options.reset) {
+      resetMetrics();
+      if (options.json) {
+        console.log(JSON.stringify({ reset: true, filePath: resolveMetricsFilePath() }, null, 2));
+      } else {
+        console.log(chalk.green('Cumulative metrics reset.'));
+        console.log(chalk.gray(`File: ${resolveMetricsFilePath()}`));
+      }
+      return;
+    }
+
+    const m = loadMetrics();
+    const avg = averageSavingsPercent(m.cumulative);
+    const filePath = resolveMetricsFilePath();
+
+    if (options.json) {
+      console.log(
+        JSON.stringify(
+          {
+            filePath,
+            cumulative: {
+              ...m.cumulative,
+              averageSavingsPercent: avg,
+            },
+          },
+          null,
+          2
+        )
+      );
+      return;
+    }
+
+    console.log(chalk.cyan('\n=== CUMULATIVE TOKEN METRICS ==='));
+    console.log(chalk.gray(`File: ${filePath}`));
+    console.log(
+      chalk.green(`Tokens saved (total): ${m.cumulative.tokensSaved.toLocaleString()}`)
+    );
+    console.log(
+      chalk.gray(
+        `Approx. average savings vs potential: ${avg}% (sum of potential tokens: ${m.cumulative.potentialTokensTotal.toLocaleString()})`
+      )
+    );
+    console.log(
+      chalk.gray(
+        `Optimizer runs recorded: ${m.cumulative.optimizerRuns.toLocaleString()} (excludes in-memory cache hits)`
+      )
+    );
+    console.log(chalk.gray(`Last update: ${m.cumulative.updatedAt}`));
+  });
+
+program
+  .command('ask')
+  .description(
+    'Send a message to OpenClaw (runs `openclaw agent --message …`; gateway must be running unless you use --local)'
+  )
+  .argument('<message...>', 'Message for the agent')
+  .option('-a, --agent <id>', 'Target agent id (e.g. main, coder)')
+  .option('-s, --session-id <id>', 'Existing session id')
+  .option('--thinking <level>', 'Thinking level (e.g. low, medium, high)')
+  .option('--deliver', 'Deliver response via channel')
+  .option('--local', 'Use embedded/local agent (OpenClaw --local)')
+  .option('--to <target>', 'Delivery target (e.g. phone), for --deliver flows')
+  .option('--reply-channel <name>', 'With --deliver: reply channel (e.g. slack)')
+  .option('--reply-to <ref>', 'With --deliver: reply target (e.g. #channel)')
+  .option('--dry-run', 'Print the openclaw invocation without running it')
+  .action(
+    (
+      messageParts: string[],
+      options: {
+        agent?: string;
+        sessionId?: string;
+        thinking?: string;
+        deliver?: boolean;
+        local?: boolean;
+        to?: string;
+        replyChannel?: string;
+        replyTo?: string;
+        dryRun?: boolean;
+      }
+    ) => {
+      const text = messageParts.join(' ').trim();
+      if (!text) {
+        console.error(chalk.red('Message is required.'));
+        process.exit(1);
+      }
+
+      const invoke = {
+        message: text,
+        agent: options.agent,
+        sessionId: options.sessionId,
+        thinking: options.thinking,
+        deliver: options.deliver,
+        local: options.local,
+        to: options.to,
+        replyChannel: options.replyChannel,
+        replyTo: options.replyTo,
+      };
+
+      if (options.dryRun) {
+        const bin = resolveOpenClawBinary();
+        const argv = buildOpenClawAgentArgs(invoke);
+        const quoted = (s: string) => (/\s/.test(s) ? `'${s.replace(/'/g, "'\\''")}'` : s);
+        console.log(chalk.gray([bin, ...argv.map(quoted)].join(' ')));
+        return;
+      }
+
+      process.exit(runOpenClawAgent(invoke));
+    }
+  );
 
 program
   .command('index')

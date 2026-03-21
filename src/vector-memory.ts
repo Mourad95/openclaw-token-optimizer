@@ -168,10 +168,16 @@ export class VectorMemory {
         chunk = chunk.substring(0, boundary + 1);
       }
 
-      chunks.push(chunk.trim());
-      start += chunk.length - this.overlap;
+      if (chunk.length === 0) {
+        start += 1;
+        continue;
+      }
 
-      if (chunk.length === 0) break;
+      chunks.push(chunk.trim());
+      const step = chunk.length - this.overlap;
+      // If step <= 0 (chunk shorter than overlap, often the tail), advance by the whole chunk
+      // so we do not loop forever (negative step) or slide one char at a time (would duplicate tail).
+      start += step > 0 ? step : chunk.length;
     }
 
     return chunks.filter((chunk) => chunk.length > 0);

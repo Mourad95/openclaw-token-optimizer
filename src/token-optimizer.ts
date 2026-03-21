@@ -8,6 +8,7 @@ import type {
   AnalysisResult,
 } from './types';
 import { logger } from './logger';
+import { recordOptimizerRun } from './metrics-store';
 
 export interface GetOptimizedContextResult {
   context: string;
@@ -100,6 +101,12 @@ export class TokenOptimizer {
     this.contextCache.set(cacheKey, result);
     this.manageCacheSize();
     this.updatePerformanceStats(result.stats.responseTime);
+
+    try {
+      recordOptimizerRun({ tokensSaved, potentialTokens });
+    } catch (err) {
+      logger.debug('Failed to persist cumulative token metrics:', err);
+    }
 
     logger.verbose(
       `Optimized context: ${estimatedTokens} tokens (saved ${result.stats.savingsPercent}%)`
@@ -222,10 +229,19 @@ export class TokenOptimizer {
     }
 
     const estimatedTokensFull = Math.ceil(totalChars / 4);
+    /** Upper bound (in ~tokens) for one optimized context slice — see `maxContextLength`. */
     const estimatedTokensOptimized = Math.ceil(this.maxContextLength / 4);
     const tokensSaved = Math.max(0, estimatedTokensFull - estimatedTokensOptimized);
     const savingsPercent =
       estimatedTokensFull > 0 ? Math.round((tokensSaved / estimatedTokensFull) * 100) : 0;
+
+    const explanation =
+      estimatedTokensFull <= estimatedTokensOptimized
+        ? `Raw memory is ~${estimatedTokensFull} tokens (all .md combined) — smaller than the optimizer context budget (~${estimatedTokensOptimized} tokens, from maxContextLength=${this.maxContextLength}). ` +
+          `Savings vs this cap stay 0% until total memory grows beyond that budget. ` +
+          `Semantic search still helps on larger note sets by skipping irrelevant chunks.`
+        : `Instead of sending ${estimatedTokensFull} tokens of raw memory, ` +
+          `up to ~${estimatedTokensOptimized} tokens of relevant context may be used per request (capped by maxContextLength).`;
 
     return {
       analysis: {
@@ -237,8 +253,7 @@ export class TokenOptimizer {
         savingsPercent,
         maxContextLength: this.maxContextLength,
       },
-      explanation: `Instead of sending ${estimatedTokensFull} tokens of raw memory, 
-                   only ${estimatedTokensOptimized} tokens of relevant context are sent.`,
+      explanation,
       recommendations: this.generateRecommendations(savingsPercent, totalFiles),
     };
   }

@@ -52,23 +52,28 @@ npm install openclaw-token-optimizer --save-dev
 
 ### Basic Configuration
 
-The setup script automatically configures OpenClaw to use the token optimizer. It updates your OpenClaw configuration file (`~/.openclaw/openclaw.json`) with:
+The setup script updates your OpenClaw configuration (`~/.openclaw/openclaw.json`) for **OpenClaw 2026.3+**:
 
-```json
-{
-  "agents": {
-    "defaults": {
-      "memorySearch": {
-        "enabled": true,
-        "provider": "custom",
-        "command": "node /path/to/openclaw-token-optimizer/dist/src/openclaw-plugin.js memory-search",
-        "maxResults": 5,
-        "maxTokens": 1000
-      }
-    }
-  }
-}
+- Removes legacy keys (`provider: "custom"`, `command`, etc.) that OpenClaw no longer accepts.
+- Adds **`agents.defaults.memorySearch.extraPaths`** pointing at this repository’s `memory/` folder so OpenClaw indexes the same Markdown files.
+
+OpenClaw’s built-in memory search uses an allowed **`provider`** (`local`, `openai`, `gemini`, `voyage`, `mistral`, or `ollama`). Configure embeddings per the [official memory config](https://docs.openclaw.ai/reference/memory-config). This project does **not** inject a custom shell command into `openclaw.json` anymore.
+
+Use the CLI in this repo (`node dist/src/index.js search …`) for the **local Vectra / Transformers.js** pipeline; that is **separate** from OpenClaw’s memory indexer.
+
+#### OpenClaw memory embeddings with Ollama (optional)
+
+Fastest path (build, local index, Ollama pull, OpenClaw config):
+
+```bash
+npm install
+npm run openclaw:link:ollama
+openclaw gateway restart
 ```
+
+Or step-by-step: **`npm run quickstart`** then **`npm run setup:ollama`**, then restart the gateway.
+
+Full explanation: **[openclaw-memory-ollama.md](./openclaw-memory-ollama.md)** (defaults: [`src/openclaw-memory-defaults.ts`](../src/openclaw-memory-defaults.ts)).
 
 ### Verify Installation
 
@@ -122,7 +127,7 @@ openclaw-token-optimizer search "token optimization"
 
 #### Step 4: Use with OpenClaw
 
-Now when you use OpenClaw, it will automatically use the token optimizer for memory searches. You'll see reduced token consumption in your OpenClaw sessions.
+After `npm run setup` (or `npm run setup:ollama` — see [openclaw-memory-ollama.md](./openclaw-memory-ollama.md)), restart the gateway. OpenClaw will index paths under `memorySearch` (including `extraPaths` from setup). The **standalone** optimizer in this repo (`search`, `index`) uses its own Vectra index; OpenClaw uses its **own** embedding provider unless you configure Ollama as above.
 
 ### Basic Commands
 
@@ -209,7 +214,7 @@ node dist/src/index.js analyze
    openclaw gateway restart
    
    # Check configuration
-   openclaw config get memorySearch
+   openclaw config get agents.defaults.memorySearch
    ```
 
 3. **"Slow performance"**

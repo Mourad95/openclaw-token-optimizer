@@ -1,0 +1,10 @@
+dist/
+node_modules/
+.git/
+.DS_Store
+*.log
+test-results/
+coverage/
+*.test.ts
+*.spec.ts
+src/__tests__/

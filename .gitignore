@@ -1,6 +1,8 @@
 node_modules/
 dist/
+.tsbuildinfo
 .vectra-index/
 logs/
 *.log
 .DS_Store
+.openclaw/

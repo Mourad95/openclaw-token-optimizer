@@ -1,6 +1,6 @@
-// tests/auth.test.ts - Tests pour le module d'authentification
+// tests/auth.test.ts — authentication module tests
 
-import { describe, test, expect, beforeEach } from 'vitest';
+import { describe, test, expect, beforeEach } from '@jest/globals';
 import {
   isValidApiKey,
   generateApiKey,
@@ -61,9 +61,9 @@ describe('Authentication Module', () => {
     });
 
     test('should reject expired JWT token', () => {
-      // Créer un token expiré (expiration dans le passé)
+      // Create an expired token
       const expiredToken = generateJwtToken(testPayload, 'different-secret');
-      // Note: La validation d'expiration est gérée par la bibliothèque JWT
+      // Note: expiry is enforced by the JWT library
       expect(validateJwtToken(expiredToken, 'wrong-secret')).toBeNull();
     });
   });
